@@ -12,6 +12,7 @@ from pikepdf._core import _unpack_subbyte_2bit, _unpack_subbyte_4bit
 if TYPE_CHECKING:
     from PIL import Image
 
+
 class ImageDecompressionError(Exception):
     """Image decompression error."""
 
