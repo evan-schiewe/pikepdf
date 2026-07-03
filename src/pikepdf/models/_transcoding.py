@@ -35,9 +35,7 @@ def _next_multiple(n: int, k: int) -> int:
     return div * k
 
 
-def unpack_subbyte_pixels(
-    packed: BytesLike, size: tuple[int, int], bits: int, scale: int = 0
-) -> tuple[BytesLike, int]:
+def unpack_subbyte_pixels(packed: BytesLike, size: tuple[int, int], bits: int, scale: int = 0) -> tuple[BytesLike, int]:
     """Unpack subbyte *bits* pixels into full bytes and rescale.
 
     When scale is 0, the appropriate scale is calculated.
@@ -101,7 +99,7 @@ def _4bit_inner_loop(in_: BytesLike, out: MutableBytesLike, scale: int) -> None:
     _unpack_subbyte_4bit(in_, out, scale)
 
 
-def image_from_byte_buffer(buffer: BytesLike, size: tuple[int, int], stride: int):
+def image_from_byte_buffer(buffer: BytesLike, size: tuple[int, int], stride: int) -> Image.Image:
     """Use Pillow to create one-component image from a byte buffer.
 
     *stride* is the number of bytes per row, and is essential for packed bits
@@ -120,9 +118,7 @@ def image_from_byte_buffer(buffer: BytesLike, size: tuple[int, int], stride: int
             # to guess that it's padded to a multiple of 4 bytes. In practice
             # the image may just be corrupted.
             try:
-                return Image.frombuffer(
-                    'L', size, buffer, "raw", 'L', (size[0] + 3) // 4, ystep
-                )
+                return Image.frombuffer('L', size, buffer, "raw", 'L', (size[0] + 3) // 4, ystep)
             except ValueError as e2:
                 raise ImageDecompressionError(str(e2)) from e2
         else:
@@ -136,7 +132,7 @@ def _make_rgb_palette(gray_palette: BytesLike) -> bytes:
     return palette
 
 
-def _depalettize_cmyk(buffer: BytesLike, palette: BytesLike):
+def _depalettize_cmyk(buffer: BytesLike, palette: BytesLike) -> bytearray:
     with memoryview(buffer) as mv:
         output = bytearray(4 * len(mv))
         for n, pal_idx in enumerate(mv):
@@ -176,16 +172,12 @@ def image_from_buffer_and_palette(
     return im
 
 
-def fix_1bit_palette_image(
-    im: Image.Image, base_mode: str, palette: BytesLike
-) -> Image.Image:
+def fix_1bit_palette_image(im: Image.Image, base_mode: str, palette: BytesLike) -> Image.Image:
     """Apply palettes to 1-bit images."""
     im = im.convert('P')
     if base_mode == 'RGB' and len(palette) == 6:
         # rgbrgb -> rgb000000...rgb
-        expanded_palette = b''.join(
-            [palette[0:3], (b'\x00\x00\x00' * (256 - 2)), palette[3:6]]
-        )
+        expanded_palette = b''.join([palette[0:3], (b'\x00\x00\x00' * (256 - 2)), palette[3:6]])
         im.putpalette(expanded_palette, rawmode='RGB')
     elif base_mode == 'L':
         try:
@@ -222,11 +214,7 @@ def generate_ccitt_header(
     ifds: list[IFD] = []
 
     def header_length(ifd_count) -> int:
-        return (
-            struct.calcsize(tiff_header_struct)
-            + struct.calcsize(ifd_struct) * ifd_count
-            + 4
-        )
+        return struct.calcsize(tiff_header_struct) + struct.calcsize(ifd_struct) * ifd_count + 4
 
     def add_ifd(tag_name: str, data: int | Callable[[], int | None], count: int = 1):
 

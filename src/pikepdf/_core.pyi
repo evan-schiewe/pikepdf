@@ -19,6 +19,7 @@ from collections.abc import (
     MutableMapping,
     Sequence,
 )
+from contextlib import AbstractContextManager
 from decimal import Decimal
 from enum import Enum, IntFlag
 from pathlib import Path
@@ -512,7 +513,7 @@ class Object:
     def as_decimal(self, default: T) -> Decimal | T: ...
     def _get_real_value(self) -> str: ...
     def copy(self) -> Object: ...
-    def emplace(self, other: Object, retain: Iterable[Name] = ...) -> None:
+    def emplace(self, other: Object, retain: Iterable[Name] | None = ...) -> None:
         """Copy all items from other without making a new object.
 
         Particularly when working with pages, it may be desirable to remove all
@@ -573,6 +574,7 @@ class Object:
     def items(self) -> Iterable[tuple[str, Object]]: ...
     def keys(self) -> set[str]:
         """Get the keys of the object, if it is a Dictionary or Stream."""
+    def values(self) -> Iterable[Object]: ...
     @staticmethod
     def parse(stream: bytes, description: str = ...) -> Object:
         """Parse PDF binary representation into PDF objects."""
@@ -653,7 +655,7 @@ class Object:
         data: bytes,
         *,
         filter: Name | Array | list[Name] | None = ...,  # pylint: disable=redefined-builtin
-        decode_parms: Dictionary | Array | None = ...,
+        decode_parms: Dictionary | Array | list[Dictionary | None] | None = ...,
         type_check: bool = ...,
     ) -> None:
         """Replace stream object's data with new (possibly compressed) `data`.
@@ -1016,7 +1018,7 @@ class _ObjectMapping:
     @overload
     def get(self, key: Name | str, /) -> Object | None: ...
     @overload
-    def get(self, key: Name | str, default: T, /) -> Object | T: ...
+    def get(self, key: Name | str, /, default: T = ...) -> Object | T: ...
     def keys(self) -> Iterator[Name]: ...
     def values(self) -> Iterator[Object]: ...
     def __contains__(self, key: Name | str, /) -> bool: ...
@@ -1523,11 +1525,12 @@ class AttachedFileSpec(ObjectHelper):
         pdf: Pdf,
         data: bytes,
         *,
-        description: str,
-        filename: str,
-        mime_type: str,
-        creation_date: str,
-        mod_date: str,
+        description: str = ...,
+        filename: str = ...,
+        mime_type: str = ...,
+        creation_date: str = ...,
+        mod_date: str = ...,
+        relationship: Name | None = ...,
     ) -> None:
         """Construct a attached file spec from data in memory.
 
@@ -1571,7 +1574,11 @@ class AttachedFileSpec(ObjectHelper):
         """
     @staticmethod
     def from_filepath(
-        pdf: Pdf, path: Path | str, *, description: str = ''
+        pdf: Pdf,
+        path: Path | str,
+        *,
+        description: str = '',
+        relationship: Name | None = ...,
     ) -> AttachedFileSpec:
         """Construct a file specification from a file path.
 
@@ -1773,10 +1780,12 @@ class Page:
     def add_overlay(
         self,
         other: Object | Page,
-        rect: Rectangle | None,
+        rect: Rectangle | None = ...,
         *,
-        push_stack: bool | None = ...,
-    ):
+        push_stack: bool = ...,
+        shrink: bool = ...,
+        expand: bool = ...,
+    ) -> Name:
         """Overlay another object on this page.
 
         Overlays will be drawn after all previous content, potentially drawing on top
@@ -1817,7 +1826,14 @@ class Page:
             Returns the name of the overlay in the resources dictionary instead
             of returning None.
         """
-    def add_underlay(self, other: Object | Page, rect: Rectangle | None):
+    def add_underlay(
+        self,
+        other: Object | Page,
+        rect: Rectangle | None = ...,
+        *,
+        shrink: bool = ...,
+        expand: bool = ...,
+    ) -> Name:
         """Underlay another object beneath this page.
 
         Underlays will be drawn before all other content, so they may be overdrawn
@@ -1871,9 +1887,9 @@ class Page:
         name: Name,
         rect: Rectangle,
         *,
-        invert_transformations: bool,
-        allow_shrink: bool,
-        allow_expand: bool,
+        invert_transformations: bool = ...,
+        allow_shrink: bool = ...,
+        allow_expand: bool = ...,
     ) -> bytes:
         """Generate content stream segment to place a Form XObject on this page.
 
@@ -1982,7 +1998,7 @@ class Page:
         arbitrary spots, such as in the middle of a token, as that can
         confuse some software.
         """
-    def emplace(self, other: Page, retain: Iterable[Name] = ...) -> None: ...
+    def emplace(self, other: Page, retain: Iterable[Name] | None = ...) -> None: ...
     def externalize_inline_images(
         self, min_size: int = ..., shallow: bool = ...
     ) -> None:
@@ -1993,6 +2009,7 @@ class Page:
             shallow: If False, recurse into nested Form XObjects.
                 If True, do not recurse.
         """
+    @property
     def form_xobjects(self) -> _ObjectMapping:
         """Return all Form XObjects associated with this page.
 
@@ -2021,6 +2038,7 @@ class Page:
             The result of modifying the content stream with ``tf``.
             The existing content stream is not modified.
         """
+    @property
     def index(self) -> int:
         """Returns the zero-based index of this page in the pages list.
 
@@ -2030,6 +2048,7 @@ class Page:
 
         .. versionadded:: 2.2
         """
+    @property
     def label(self) -> str:
         """Returns the page label for this page, accounting for section numbers.
 
@@ -3258,7 +3277,8 @@ class Pdf:
 
         .. versionadded:: 2.11
         """
-    def flatten_annotations(self, mode: str) -> None:
+    def lock(self) -> AbstractContextManager[None]: ...
+    def flatten_annotations(self, mode: str = ...) -> None:
         """Flattens all PDF annotations into regular PDF content.
 
         Annotations are markup such as review comments, highlights, proofreading
@@ -3555,10 +3575,10 @@ class Job:
     """Version number of the most recent qpdf-JSON schema."""
 
     @staticmethod
-    def json_out_schema(*, schema: int) -> str:
+    def json_out_schema(*, schema: int = ...) -> str:
         """For reference, the qpdf JSON output schema is built-in."""
     @staticmethod
-    def job_json_schema(*, schema: int) -> str:
+    def job_json_schema(*, schema: int = ...) -> str:
         """For reference, the qpdf job command line schema is built-in."""
     @overload
     def __init__(self, json: str) -> None: ...
@@ -3685,6 +3705,10 @@ class Matrix:
     @overload
     def __init__(self, other: Matrix): ...
     @overload
+    def __init__(self, other: Array, /): ...
+    @overload
+    def __init__(self, other: _ObjectList, /): ...
+    @overload
     def __init__(self, values: tuple[float, float, float, float, float, float], /): ...
     @classmethod
     def identity(cls) -> Matrix:
@@ -3762,7 +3786,7 @@ class Matrix:
         In rare situations, the inverse may not exist. In that case, an
         exception is thrown. The PDF will likely have rendering problems.
         """
-    def __array__(self, dtype: Any = None, copy: bool | None = True) -> np.ndarray:
+    def __array__(self, dtype: Any = None, copy: bool | None = None) -> np.ndarray:
         """Convert this matrix to a NumPy array of type dtype.
 
         If copy is True, a copy is made. If copy is False, an exception is raised.
@@ -3784,6 +3808,8 @@ class Matrix:
     @overload
     def transform(self, rect: Rectangle) -> Rectangle: ...
     def __repr__(self) -> str: ...
+    def _repr_latex_(self) -> str: ...
+    def __bool__(self) -> bool: ...
     def __eq__(self, other: Any, /) -> bool: ...
     def __getstate__(self) -> tuple[float, float, float, float, float, float]: ...
     def __setstate__(
@@ -3864,7 +3890,7 @@ def _new_string_utf8(s: str) -> String:
 
 def _translate_qpdf_logic_error(arg0: str) -> str: ...
 def get_decimal_precision() -> int:
-    """Set the number of decimal digits to use when converting floats."""
+    """Get the number of decimal digits to use when converting floats."""
 
 def pdf_doc_to_utf8(pdfdoc: bytes) -> str:
     """Low-level function to convert PDFDocEncoding to UTF-8.
@@ -3881,7 +3907,7 @@ def _get_effective_explicit_mode() -> bool: ...
 def _enter_thread_explicit_mode() -> None: ...
 def _exit_thread_explicit_mode() -> None: ...
 def set_decimal_precision(prec: int) -> int:
-    """Get the number of decimal digits to use when converting floats."""
+    """Set the number of decimal digits to use when converting floats."""
 
 def unparse(obj: Any) -> bytes: ...
 def utf8_to_pdf_doc(utf8: str, unknown: bytes) -> tuple[bool, bytes]: ...

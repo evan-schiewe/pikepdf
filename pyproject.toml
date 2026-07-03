@@ -138,6 +138,7 @@ repair-wheel-command = "delvewheel repair --add-path d:\\qpdf\\bin -w {dest_dir}
 
 [tool.mypy]
 exclude = ["^_qpdf\\.py$"]
+mypy_path = "src"
 
 [tool.pytest.ini_options]
 minversion = "6.0"
@@ -235,6 +236,7 @@ dev = [
   "pygithub",
   "ruff>=0.12.9",
   "setuptools>=80.9.0",
+  "ty",
   { include-group = "mypy" },
   { include-group = "test" },
 ]
@@ -247,7 +249,7 @@ docs = [
   "sphinx-rtd-theme",
   "tomli; python_version < '3.11'",
 ]
-mypy = ["lxml-stubs", "types-Pillow", "types-requests", "types-setuptools"]
+mypy = ["lxml-stubs", "types-Pillow", "types-requests", "types-setuptools", "numpy"]
 test = [
   "attrs>=20.2.0",
   "coverage[toml]",

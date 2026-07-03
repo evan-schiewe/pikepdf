@@ -70,6 +70,8 @@ uv run ruff check --fix src tests
 
 # Python: type check
 uv run python -m mypy src
+uv run python -m mypy tests/typing/core_stubs.py
+uv run ty check tests/typing/core_stubs.py
 
 # C++: format (uses .clang-format)
 clang-format -i src/core/*.cpp src/core/*.h
